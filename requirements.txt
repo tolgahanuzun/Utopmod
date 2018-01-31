@@ -1,0 +1,7 @@
+sqlalchemy==1.2.0b3
+requests
+python-telegram-bot 
+sqlalchemy
+flask_admin
+flask_login
+flask
