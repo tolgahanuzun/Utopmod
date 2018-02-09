@@ -1,7 +1,7 @@
 sqlalchemy==1.2.0b3
 requests
-python-telegram-bot 
-sqlalchemy
+python-telegram-bot
 flask_admin
 flask_login
 flask
+flask_sqlalchemy
