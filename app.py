@@ -16,6 +16,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 
+
 def message_push(text, chat_id):
     TOKEN = 'KEY'
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
@@ -99,9 +100,11 @@ def utopian(bot, update):
 
 def help(bot, update):
     text = '''
-Hello Dear! There are 2 commands available.. Example
+Hello Dear! There are 4 commands available.. Example
 /register username
 /utopian
+/pending
+/price
     '''
     update.message.reply_text(text)
 
@@ -140,33 +143,72 @@ def control():
                 db.session.add(check_list)
                 db.session.commit()
 
-        # datetime.datetime.utcnow() > check_list.end_date
-        #import ipdb; ipdb.set_trace()
        
         remove_lists = Control.query.filter(Control.is_vote == False, Control.is_vote == False).all()
         for remove in remove_lists:
             db.session.delete(remove)
             db.session.commit()
 
+def pending_post(bot, update):
+    categories = pending['categories']
+    text = """
+Pending Post: {}
+Development: {}
+Bug hunting: {} 
+Documentation: {}
+Translations: {}
+Analysis: {}
+Ideas: {}
+Graphics: {}
+Tutorials: {}
+Video_tutorials: {}
+Blog: {}
+Sub_projects: {}
+Tasks: {}
+Visibility: {}
+Copywriting: {}
+""".format(
+pending['_total'], categories['development'], categories['bug_hunting'], categories['documentation'],
+categories['translations'], categories['analysis'], categories['ideas'], categories['graphics'],
+categories['tutorials'], categories['video_tutorials'], categories['blog'], categories['sub_projects'],
+categories['tasks'], categories['visibility'], categories['copywriting'])
+    update.message.reply_text(text)
+
+def price_all(bot, update):
+    choose = ['steem', 'steem-dollars', 'bitcoin']
+    text  = """
+Steem : $ {}
+SDB : $ {}
+Bitcoin : $ {}
+""".format(steemit.get_coin(choose[0]), steemit.get_coin(choose[1]) ,steemit.get_coin(choose[2]))
+    update.message.reply_text(text)
 
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
     updater = Updater('KEY')
-    j = updater.job_queue
+    #approved_controll = updater.job_queue
+    pending_data = updater.job_queue
 
     def callback_minute(bot, job):
         logger.warning('Start')
         control()
         logger.warning('End')
 
+    def peding_controll(bot, job):
+        global pending
+        pending = steemit.post_status()
 
-    job_minute = j.run_repeating(callback_minute, interval=60, first=0)
+
+    #approved_controll.run_repeating(callback_minute, interval=60, first=0)
+    pending_data.run_repeating(peding_controll, interval=600, first=0)
 
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("register", register))
     dp.add_handler(CommandHandler("utopian", utopian))
+    dp.add_handler(CommandHandler("pending", pending_post))
+    dp.add_handler(CommandHandler("price", price_all))
     dp.add_handler(CommandHandler("help", help))
 
 

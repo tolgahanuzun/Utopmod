@@ -1,5 +1,9 @@
 import requests
 
+# Steem         : https://api.coinmarketcap.com/v1/ticker/steem/
+# Steem-dollars : https://api.coinmarketcap.com/v1/ticker/steem-dollars/
+# Bitcoin       : https://api.coinmarketcap.com/v1/ticker/bitcoin/
+
 API = 'https://api.steemjs.com/'
 
 def steemit_api(steemit_name):
@@ -9,8 +13,8 @@ def steemit_api(steemit_name):
 def blog_list(steemit_name, number=10):
     posts = steemit_api(steemit_name)
     post = posts['content']
-    result = {'result_blog': [], 'result_url': []}
-    for pk in posts['accounts']['tolgahanuzun']['blog'][:number]:
+    result = {'result_blog': [steemit_name], 'result_url': []}
+    for pk in posts['accounts'][steemit_api]['blog'][:number]:
         if post[pk]['category'] == 'utopian-io':
             result['result_blog'].append(pk)
             result['result_url'].append(post[pk]['url'])
@@ -73,4 +77,13 @@ def mod_list():
 
     return all_list + teams
 
+def post_status():
+    api = 'https://utopian.plus/unreviewedPosts.json'
+    data = requests.get(api).json()
+    pending = data['posts']['pending']
+    return pending
 
+def get_coin(coin):
+    url = 'https://api.coinmarketcap.com/v1/ticker/{}'.format(coin)
+    data = requests.get(url).json()[0]
+    return data['price_usd']
