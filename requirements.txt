@@ -5,3 +5,5 @@ flask_admin
 flask_login
 flask
 flask_sqlalchemy
+flask_migrate
+flask-script
