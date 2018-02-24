@@ -5,7 +5,7 @@ import requests
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-from server import Telegram_User, Control, db
+from server import Telegram_User, Control, Price_task, db
 import steemit
 from sqlalchemy import or_
 
@@ -183,11 +183,38 @@ Bitcoin : $ {}
 """.format(steemit.get_coin(choose[0]), steemit.get_coin(choose[1]) ,steemit.get_coin(choose[2]))
     update.message.reply_text(text)
 
+def price_task(bot, update):
+    client_id = update.to_dict()['message']['from']['id']
+    price = update.to_dict()['message']['text'].replace(' ','').split('/price_task')[1]
+    
+    user = Telegram_User().get_users(client_id)
+    if not user:
+        update.message.reply_text('You need to register first. `/register steemitname` !')
+        return 
+
+    if not price.isnumeric():
+        update.message.reply_text('Please enter a numeric: (for example: /price_task 4.56 )')
+        return
+
+    price_status = Price_task().get_task(user)
+
+    if price_status:
+        update.message.reply_text('You can only create one task.')
+        return
+
+    create_task = Price_task()
+    create_task.telegram_user = user
+    create_task.price_task = price
+    db.session.add(create_task)
+    db.session.commit()
+    update.message.reply_text('Task created.')
+
+
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
     updater = Updater('KEY')
-    #approved_controll = updater.job_queue
+    approved_controll = updater.job_queue
     pending_data = updater.job_queue
 
     def callback_minute(bot, job):
@@ -199,8 +226,11 @@ def main():
         global pending
         pending = steemit.post_status()
 
+    #def price_controll(bot, job):
+    #    price_status()
 
-    #approved_controll.run_repeating(callback_minute, interval=60, first=0)
+
+    approved_controll.run_repeating(callback_minute, interval=60, first=0)
     pending_data.run_repeating(peding_controll, interval=600, first=0)
 
     dp = updater.dispatcher
@@ -209,6 +239,7 @@ def main():
     dp.add_handler(CommandHandler("utopian", utopian))
     dp.add_handler(CommandHandler("pending", pending_post))
     dp.add_handler(CommandHandler("price", price_all))
+    dp.add_handler(CommandHandler("price_task", price_task))
     dp.add_handler(CommandHandler("help", help))
 
 
