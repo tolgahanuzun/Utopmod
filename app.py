@@ -28,7 +28,6 @@ def message_push(text, chat_id):
 
 
 def register(bot, update):
-    #import ipdb; ipdb.set_trace()
     client_id = update.to_dict()['message']['from']['id']
     steem_name = update.to_dict()['message']['text'].replace(' ','').split('/register')[1]
 
@@ -39,7 +38,6 @@ def register(bot, update):
         update.message.reply_text('There is a problem. User name validation? Try again')        
         return
     try:
-        #import ipdb; ipdb.set_trace()
         telegram_user = Telegram_User()
         telegram_user.client_id = client_id
         telegram_user.steem_name = steem_name
@@ -105,6 +103,8 @@ Hello Dear! There are 4 commands available.. Example
 /utopian
 /pending
 /price
+/price_task 4.56
+/price_destroy
     '''
     update.message.reply_text(text)
 
@@ -152,9 +152,9 @@ def control():
 def price_control():
     task_list = Price_task.query.all()
     for task in task_list:
-        now_price = int(steemit.get_coin('steem-dollars'))
-        if task.price => now_price:
-            text = 'Task completed. SBD, its current rate:{}'.format(now_price)
+        now_price = float(steemit.get_coin('steem-dollars'))
+        if  now_price >= task.price_task:
+            text = 'Task completed. SBD, its current rate: ${}'.format(now_price)
             message_push(text, task.telegram_user.client_id)
             db.session.delete(remove)
             db.session.commit()
@@ -202,8 +202,9 @@ def price_task(bot, update):
     if not user:
         update.message.reply_text('You need to register first. `/register steemitname` !')
         return 
-
-    if not price.isnumeric():
+    try:
+        price = float(price)
+    except expression as identifier:
         update.message.reply_text('Please enter a numeric: (for example: /price_task 4.56 )')
         return
 
@@ -231,7 +232,7 @@ def price_destroy(bot, update):
     price_status = Price_task().get_task(user)
 
     if price_status:
-        db.session.delete(remove)
+        db.session.delete(price_status)
         db.session.commit()
         update.message.reply_text('The task was destroyed.')
     
@@ -242,6 +243,7 @@ def main():
     updater = Updater('KEY')
     approved_controll = updater.job_queue
     pending_data = updater.job_queue
+    price_tast_control = updater.job_queue
 
     def callback_minute(bot, job):
         logger.warning('Start')
@@ -252,12 +254,13 @@ def main():
         global pending
         pending = steemit.post_status()
 
-    #def price_control(bot, job):
-    #    price_status()
+    def price_controler(bot, job):
+        price_control()
 
 
     approved_controll.run_repeating(callback_minute, interval=60, first=0)
     pending_data.run_repeating(peding_controll, interval=600, first=0)
+    price_tast_control.run_repeating(price_controler, interval=600, first=0)
 
     dp = updater.dispatcher
 
