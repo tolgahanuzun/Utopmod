@@ -86,6 +86,8 @@ class Price_task(db.Model):
     def __repr__(self):
         return '<Price task  %r>' % (self.price_task)
 
+    def get_task(self, user):
+        return self.query.filter_by(telegram_user=user).first() or False
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
