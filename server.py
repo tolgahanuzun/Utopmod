@@ -1,19 +1,20 @@
 import os
+from datetime import datetime
 
 from flask import Flask, url_for, redirect, request
-
 from flask_admin import helpers, expose
 from flask_admin.contrib import sqla
 from flask_sqlalchemy import SQLAlchemy
-from wtforms import form, fields, validators
 from flask_admin import base
 from sqlalchemy import UniqueConstraint
-
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager
 import flask_admin as admin
 import flask_login as login
-from datetime import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
+from wtforms import form, fields, validators
+
 from server import *
 
 app = Flask(__name__)
@@ -25,6 +26,11 @@ app.config['DATABASE_FILE'] = 'utopianio.sqlite'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + app.config['DATABASE_FILE']
 app.config['SQLALCHEMY_ECHO'] = False
 db = SQLAlchemy(app)
+
+migrate = Migrate(app, db)
+
+manager = Manager(app)
+manager.add_command('db', MigrateCommand)
 
 
 class Telegram_User(db.Model):
@@ -66,6 +72,22 @@ class Control(db.Model):
 
     def get_blog(self, blog):
         return self.query.filter_by(post=blog).first() or False
+
+
+class Price_task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_user_id = db.Column(db.Integer(), db.ForeignKey(Telegram_User.id))
+    telegram_user = db.relationship(Telegram_User)
+    price_task = db.Column(db.Integer)
+
+    def __str__(self):
+        return str(self.id)
+
+    def __repr__(self):
+        return '<Price task  %r>' % (self.price_task)
+
+    def get_task(self, user):
+        return self.query.filter_by(telegram_user=user).first() or False
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -200,4 +222,4 @@ if __name__ == '__main__':
     if not os.path.exists(database_path):
         build_sample_db()
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    manager.run()

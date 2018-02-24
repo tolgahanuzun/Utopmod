@@ -5,7 +5,7 @@ import requests
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-from server import Telegram_User, Control, db
+from server import Telegram_User, Control, Price_task, db
 import steemit
 from sqlalchemy import or_
 
@@ -28,7 +28,6 @@ def message_push(text, chat_id):
 
 
 def register(bot, update):
-    #import ipdb; ipdb.set_trace()
     client_id = update.to_dict()['message']['from']['id']
     steem_name = update.to_dict()['message']['text'].replace(' ','').split('/register')[1]
 
@@ -39,7 +38,6 @@ def register(bot, update):
         update.message.reply_text('There is a problem. User name validation? Try again')        
         return
     try:
-        #import ipdb; ipdb.set_trace()
         telegram_user = Telegram_User()
         telegram_user.client_id = client_id
         telegram_user.steem_name = steem_name
@@ -105,6 +103,8 @@ Hello Dear! There are 4 commands available.. Example
 /utopian
 /pending
 /price
+/price_task 4.56
+/price_destroy
     '''
     update.message.reply_text(text)
 
@@ -149,6 +149,17 @@ def control():
             db.session.delete(remove)
             db.session.commit()
 
+def price_control():
+    task_list = Price_task.query.all()
+    for task in task_list:
+        now_price = float(steemit.get_coin('steem-dollars'))
+        if  now_price >= task.price_task:
+            text = 'Task completed. SBD, its current rate: ${}'.format(now_price)
+            message_push(text, task.telegram_user.client_id)
+            db.session.delete(remove)
+            db.session.commit()
+
+
 def pending_post(bot, update):
     categories = pending['categories']
     text = """
@@ -183,12 +194,56 @@ Bitcoin : $ {}
 """.format(steemit.get_coin(choose[0]), steemit.get_coin(choose[1]) ,steemit.get_coin(choose[2]))
     update.message.reply_text(text)
 
+def price_task(bot, update):
+    client_id = update.to_dict()['message']['from']['id']
+    price = update.to_dict()['message']['text'].replace(' ','').split('/price_task')[1]
+    
+    user = Telegram_User().get_users(client_id)
+    if not user:
+        update.message.reply_text('You need to register first. `/register steemitname` !')
+        return 
+    try:
+        price = float(price)
+    except expression as identifier:
+        update.message.reply_text('Please enter a numeric: (for example: /price_task 4.56 )')
+        return
+
+    price_status = Price_task().get_task(user)
+
+    if price_status:
+        update.message.reply_text('You can only create one task.')
+        return
+
+    create_task = Price_task()
+    create_task.telegram_user = user
+    create_task.price_task = price
+    db.session.add(create_task)
+    db.session.commit()
+    update.message.reply_text('Task created.')
+
+def price_destroy(bot, update):
+    client_id = update.to_dict()['message']['from']['id']
+    user = Telegram_User().get_users(client_id)
+
+    if not user:
+        update.message.reply_text('You need to register first. `/register steemitname` !')
+        return 
+
+    price_status = Price_task().get_task(user)
+
+    if price_status:
+        db.session.delete(price_status)
+        db.session.commit()
+        update.message.reply_text('The task was destroyed.')
+    
+
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
     updater = Updater('KEY')
-    #approved_controll = updater.job_queue
+    approved_controll = updater.job_queue
     pending_data = updater.job_queue
+    price_tast_control = updater.job_queue
 
     def callback_minute(bot, job):
         logger.warning('Start')
@@ -199,9 +254,13 @@ def main():
         global pending
         pending = steemit.post_status()
 
+    def price_controler(bot, job):
+        price_control()
 
-    #approved_controll.run_repeating(callback_minute, interval=60, first=0)
+
+    approved_controll.run_repeating(callback_minute, interval=60, first=0)
     pending_data.run_repeating(peding_controll, interval=600, first=0)
+    price_tast_control.run_repeating(price_controler, interval=600, first=0)
 
     dp = updater.dispatcher
 
@@ -209,6 +268,8 @@ def main():
     dp.add_handler(CommandHandler("utopian", utopian))
     dp.add_handler(CommandHandler("pending", pending_post))
     dp.add_handler(CommandHandler("price", price_all))
+    dp.add_handler(CommandHandler("price_task", price_task))
+    dp.add_handler(CommandHandler("price_destroy", price_destroy))
     dp.add_handler(CommandHandler("help", help))
 
 
