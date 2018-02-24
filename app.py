@@ -149,6 +149,17 @@ def control():
             db.session.delete(remove)
             db.session.commit()
 
+def price_control():
+    task_list = Price_task.query.all()
+    for task in task_list:
+        now_price = int(steemit.get_coin('steem-dollars'))
+        if task.price => now_price:
+            text = 'Task completed. SBD, its current rate:{}'.format(now_price)
+            message_push(text, task.telegram_user.client_id)
+            db.session.delete(remove)
+            db.session.commit()
+
+
 def pending_post(bot, update):
     categories = pending['categories']
     text = """
@@ -209,6 +220,21 @@ def price_task(bot, update):
     db.session.commit()
     update.message.reply_text('Task created.')
 
+def price_destroy(bot, update):
+    client_id = update.to_dict()['message']['from']['id']
+    user = Telegram_User().get_users(client_id)
+
+    if not user:
+        update.message.reply_text('You need to register first. `/register steemitname` !')
+        return 
+
+    price_status = Price_task().get_task(user)
+
+    if price_status:
+        db.session.delete(remove)
+        db.session.commit()
+        update.message.reply_text('The task was destroyed.')
+    
 
 def main():
     """Start the bot."""
@@ -226,7 +252,7 @@ def main():
         global pending
         pending = steemit.post_status()
 
-    #def price_controll(bot, job):
+    #def price_control(bot, job):
     #    price_status()
 
 
@@ -240,6 +266,7 @@ def main():
     dp.add_handler(CommandHandler("pending", pending_post))
     dp.add_handler(CommandHandler("price", price_all))
     dp.add_handler(CommandHandler("price_task", price_task))
+    dp.add_handler(CommandHandler("price_destroy", price_destroy))
     dp.add_handler(CommandHandler("help", help))
 
 
