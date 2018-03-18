@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def message_push(text, chat_id):
-    TOKEN = 'KEY'
+    TOKEN = '535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI'
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown&disable_web_page_preview=True".format(text, chat_id)
@@ -114,10 +114,11 @@ def error(bot, update, error):
 
 
 def control():
-    check_lists = Control.query.filter(or_(Control.is_vote == True, Control.is_vote == True)).all()
+    check_lists = Control.query.filter(or_(Control.is_vote == True, Control.is_comment == True)).all()
     for check_list in check_lists:
+        #import ipdb; ipdb.set_trace()
         votes_status, commen_status, cashout = steemit.moderasyon(check_list.post)
-
+        
         if check_list.is_comment:
             if votes_status or commen_status:
                 if not commen_status:
@@ -204,7 +205,7 @@ def price_task(bot, update):
         return 
     try:
         price = float(price)
-    except expression as identifier:
+    except:
         update.message.reply_text('Please enter a numeric: (for example: /price_task 4.56 )')
         return
 
@@ -240,7 +241,7 @@ def price_destroy(bot, update):
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater('KEY')
+    updater = Updater('535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI')
     approved_controll = updater.job_queue
     pending_data = updater.job_queue
     price_tast_control = updater.job_queue

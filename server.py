@@ -205,6 +205,7 @@ admin = base.Admin(app, 'Bot', index_view=MyAdminIndexView(), base_template='my_
 # Add view
 admin.add_view(MyModelView(Telegram_User, db.session))
 admin.add_view(MyModelView(Control, db.session))
+admin.add_view(MyModelView(Price_task, db.session))
 admin.add_view(MyModelView(User, db.session))
 
 def build_sample_db():
