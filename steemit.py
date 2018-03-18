@@ -15,7 +15,7 @@ def blog_list(steemit_name, number=10):
     posts = steemit_api(steemit_name)
     post = posts['content']
     result = {'result_blog': [steemit_name], 'result_url': []}
-    for pk in posts['accounts'][steemit_api]['blog'][:number]:
+    for pk in posts['accounts'][steemit_name]['blog'][:number]:
         if post[pk]['category'] == 'utopian-io':
             result['result_blog'].append(pk)
             result['result_url'].append(post[pk]['url'])
