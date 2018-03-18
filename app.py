@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def message_push(text, chat_id):
-    TOKEN = 'KEY'
+    TOKEN = '535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI'
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown&disable_web_page_preview=True".format(text, chat_id)
@@ -98,13 +98,14 @@ def utopian(bot, update):
 
 def help(bot, update):
     text = '''
-Hello Dear! There are 4 commands available.. Example
+Hello Dear! There are 7 commands available.. Example
 /register username
 /utopian
 /pending
 /price
 /price_task 4.56
 /price_destroy
+/me
     '''
     update.message.reply_text(text)
 
@@ -277,7 +278,7 @@ Total Balance : {} SBD
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater('KEY')
+    updater = Updater('535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI')
     approved_controll = updater.job_queue
     pending_data = updater.job_queue
     price_tast_control = updater.job_queue
