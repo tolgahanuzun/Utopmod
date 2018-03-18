@@ -3,7 +3,7 @@ import logging
 import urllib
 import requests
 import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 
 from server import Telegram_User, Control, Price_task, db
 import steemit
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def message_push(text, chat_id):
-    TOKEN = '535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI'
+    TOKEN = 'KEY'
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown&disable_web_page_preview=True".format(text, chat_id)
@@ -123,6 +123,8 @@ def control():
             if votes_status or commen_status:
                 if not commen_status:
                     text = 'It approved by moderators.. Check it out.\n--\nhttps://steemit.com{}'.format(check_list.post)
+                    message_push(text, check_list.telegram_user.client_id)
+                    text = steemit.questions_details(check_list.post)
                     message_push(text, check_list.telegram_user.client_id)
                     check_list.is_comment = False
                     db.session.add(check_list)
@@ -236,12 +238,46 @@ def price_destroy(bot, update):
         db.session.delete(price_status)
         db.session.commit()
         update.message.reply_text('The task was destroyed.')
-    
+
+def profile_me(bot, update):
+    keyboard = [
+                [telegram.InlineKeyboardButton("My Profile", callback_data='1')],
+                [telegram.InlineKeyboardButton("Steemit", callback_data=2)],
+                [telegram.InlineKeyboardButton("Rocks", callback_data=3)],
+                [telegram.InlineKeyboardButton("Steemd", callback_data='4')]
+                ]
+
+    reply_markup = telegram.InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+
+def button(bot, update):
+    query = update.callback_query
+
+    bot.edit_message_text(text="Selected option: %s" % query.data,
+                          chat_id=query.message.chat_id,
+                          message_id=query.message.message_id)
+    steem_name = Telegram_User().get_users(query.message.chat_id).steem_name
+
+    if int(query.data) == 1:
+        text = """Name: {} \n
+Voting Power  : {}
+Reputation     : {}
+Total Balance : {} SBD
+""".format(steem_name, steemit.get_vp_rp(steem_name)[0], steemit.get_vp_rp(steem_name)[1],
+            steemit.balance(steem_name))
+    elif int(query.data) == 2:
+        text = "https://steemit.com/@{}".format(steem_name)
+    elif int(query.data) == 3:
+        text = "https://steem.rocks/@{}".format(steem_name)
+    elif int(query.data) == 4:
+        text = "https://steemd.com/@{}".format(steem_name)
+    bot.send_message(query.message.chat_id, text)
 
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater('535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI')
+    updater = Updater('KEY')
     approved_controll = updater.job_queue
     pending_data = updater.job_queue
     price_tast_control = updater.job_queue
@@ -272,6 +308,8 @@ def main():
     dp.add_handler(CommandHandler("price_task", price_task))
     dp.add_handler(CommandHandler("price_destroy", price_destroy))
     dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("me", profile_me))
+    dp.add_handler(CallbackQueryHandler(button))
 
 
     dp.add_error_handler(error)
