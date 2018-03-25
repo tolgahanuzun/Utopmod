@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def message_push(text, chat_id):
-    TOKEN = '535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI'
+    TOKEN = '535189587:AAEj7ebECt8MC9oVsjY1_XUz1QOWFfKqncc'
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown&disable_web_page_preview=True".format(text, chat_id)
@@ -94,6 +94,42 @@ def utopian(bot, update):
     except:
         update.message.reply_text('Something went wrong, try again or report..!')  
 
+def utopianqa(bot, update):
+    client_id = update.to_dict()['message']['from']['id']
+    user = Telegram_User().get_users(client_id)
+    if not user:
+        update.message.reply_text('You need to register first. `/register steemitname` !')
+        return 
+    if user.activite:
+        update.message.reply_text('You may be forbidden. @tolgahanuzun your communication!')
+        return
+
+    check_post = update.to_dict()['message']['text'].split('/utopianqa ')[1]
+    if 'steemit.com' in check_post:
+        check_post = check_post.split('steemit.com')[1]
+    elif 'utopian.io':
+        check_post = check_post.split('utopian.io')[1]        
+
+    text = steemit.questions_details(check_post)
+    message_push(text, client_id)
+
+def other_account(bot, update):
+    client_id = update.to_dict()['message']['from']['id']
+    steem_name = update.to_dict()['message']['text'].split('/other ')[1]    
+    json_user = steemit.get_user(steem_name).json()
+
+    if not json_user:
+        update.message.reply_text('There is a problem. User name validation? Try again')
+        return
+
+    text = "Name: {} \n".format(steem_name)
+    text = text + "Voting Power : {}\n".format(steemit.get_vp_rp(steem_name)[0])
+    text = text + "Reputation     : {}\n".format(steemit.get_vp_rp(steem_name)[1])
+    text = text + "Total Balance : {} SBD\n".format(steemit.balance(steem_name))
+    text = text + "Followers Count : {}\n".format(json_user[0]['followers_count'])
+    text = text +  "Following Count : {}\n".format(json_user[0]['following_count'])
+
+    message_push(text, client_id)
 
 
 def help(bot, update):
@@ -160,12 +196,17 @@ def price_control():
         if  now_price >= task.price_task:
             text = 'Task completed. SBD, its current rate: ${}'.format(now_price)
             message_push(text, task.telegram_user.client_id)
-            db.session.delete(remove)
+            db.session.delete(task)
             db.session.commit()
 
 
 def pending_post(bot, update):
-    categories = pending['categories']
+    try:
+        categories = pending['categories']
+    except :
+        text = 'No service data. The Utopian API may have changed.'
+        update.message.reply_text(text)
+        return
     text = """
 Pending Post: {}
 Development: {}
@@ -190,12 +231,17 @@ categories['tasks'], categories['visibility'], categories['copywriting'])
     update.message.reply_text(text)
 
 def price_all(bot, update):
+    coin_name = update.to_dict()['message']['text'].split('/price ')
+    if len(coin_name) > 1:
+        try:
+            coin_price_btc = steemit.get_coin(coin_name[1])
+            update.message.reply_text('{} : {} $'.format(coin_name[1].title(), coin_price_btc))            
+        except:
+            update.message.reply_text('There is a problem. Coin name validation? Try again')
+        return
+
     choose = ['steem', 'steem-dollars', 'bitcoin']
-    text  = """
-Steem : $ {}
-SDB : $ {}
-Bitcoin : $ {}
-""".format(steemit.get_coin(choose[0]), steemit.get_coin(choose[1]) ,steemit.get_coin(choose[2]))
+    text  = "Steem : $ {}\nSDB : $ {}\nBitcoin : $ {}".format(steemit.get_coin(choose[0]), steemit.get_coin(choose[1]) ,steemit.get_coin(choose[2]))
     update.message.reply_text(text)
 
 def price_task(bot, update):
@@ -242,11 +288,11 @@ def price_destroy(bot, update):
 
 def profile_me(bot, update):
     keyboard = [
-                [telegram.InlineKeyboardButton("My Profile", callback_data='1')],
-                [telegram.InlineKeyboardButton("Steemit", callback_data=2)],
-                [telegram.InlineKeyboardButton("Rocks", callback_data=3)],
-                [telegram.InlineKeyboardButton("Steemd", callback_data='4')]
-                ]
+        [telegram.InlineKeyboardButton("My Profile", callback_data='1')],
+        [telegram.InlineKeyboardButton("Steemit", callback_data=2)],
+        [telegram.InlineKeyboardButton("Rocks", callback_data=3)],
+        [telegram.InlineKeyboardButton("Steemd", callback_data='4')]
+        ]
 
     reply_markup = telegram.InlineKeyboardMarkup(keyboard)
 
@@ -261,12 +307,13 @@ def button(bot, update):
     steem_name = Telegram_User().get_users(query.message.chat_id).steem_name
 
     if int(query.data) == 1:
-        text = """Name: {} \n
-Voting Power  : {}
-Reputation     : {}
-Total Balance : {} SBD
-""".format(steem_name, steemit.get_vp_rp(steem_name)[0], steemit.get_vp_rp(steem_name)[1],
-            steemit.balance(steem_name))
+        json_user = steemit.get_user(steem_name).json()
+        text = "Name: {} \n".format(steem_name)
+        text = text + "Voting Power : {}\n".format(steemit.get_vp_rp(steem_name)[0])
+        text = text + "Reputation     : {}\n".format(steemit.get_vp_rp(steem_name)[1])
+        text = text + "Total Balance : {} SBD\n".format(steemit.balance(steem_name))
+        text = text + "Followers Count : {}\n".format(json_user[0]['followers_count'])
+        text = text +  "Following Count : {}\n".format(json_user[0]['following_count'])
     elif int(query.data) == 2:
         text = "https://steemit.com/@{}".format(steem_name)
     elif int(query.data) == 3:
@@ -278,7 +325,7 @@ Total Balance : {} SBD
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater('535189587:AAEwyRlvpfj000NGBcb0T4juN64e-bel8fI')
+    updater = Updater('535189587:AAEj7ebECt8MC9oVsjY1_XUz1QOWFfKqncc')
     approved_controll = updater.job_queue
     pending_data = updater.job_queue
     price_tast_control = updater.job_queue
@@ -297,19 +344,21 @@ def main():
 
 
     approved_controll.run_repeating(callback_minute, interval=60, first=0)
-    pending_data.run_repeating(peding_controll, interval=600, first=0)
+    #pending_data.run_repeating(peding_controll, interval=600, first=0)
     price_tast_control.run_repeating(price_controler, interval=600, first=0)
 
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("register", register))
     dp.add_handler(CommandHandler("utopian", utopian))
+    dp.add_handler(CommandHandler("utopianqa", utopianqa))    
     dp.add_handler(CommandHandler("pending", pending_post))
     dp.add_handler(CommandHandler("price", price_all))
     dp.add_handler(CommandHandler("price_task", price_task))
     dp.add_handler(CommandHandler("price_destroy", price_destroy))
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("me", profile_me))
+    dp.add_handler(CommandHandler("other", other_account))
     dp.add_handler(CallbackQueryHandler(button))
 
 
