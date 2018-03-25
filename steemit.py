@@ -29,7 +29,7 @@ def validate_user(steemit_name):
     if data == '200':
         status = False
     return status
-    
+
 
 def moderasyon(link):
     url = 'https://steemit.com{}.json'.format(link)
@@ -49,7 +49,7 @@ def questions_details(link):
     url = 'https://steemit.com{}.json'.format(link)
     data = requests.get(url).json()['post']
     datas = data['json_metadata']['questions']
-    text = ''
+    text = ' '
     total_score = 0
     score = 0
     for id, data in enumerate(datas, 1):
@@ -136,3 +136,7 @@ def balance(steemit_name):
     balance = data['accounts'][steemit_name]['sbd_balance']
     balance = balance.split(' SBD')[0]
     return balance
+
+def get_user(steemit_name):
+    url = 'https://steemdb.com/api/accounts?account={}'.format(steemit_name)
+    return requests.get(url)
