@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def message_push(text, chat_id):
-    TOKEN = '535189587:AAEj7ebECt8MC9oVsjY1_XUz1QOWFfKqncc'
+    TOKEN = 'KEY'
     URL = "https://api.telegram.org/bot{}/".format(TOKEN)
     text = urllib.parse.quote_plus(text)
     url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown&disable_web_page_preview=True".format(text, chat_id)
@@ -113,9 +113,9 @@ def utopianqa(bot, update):
     text = steemit.questions_details(check_post)
     message_push(text, client_id)
 
-def other_account(bot, update):
+def get_user(bot, update):
     client_id = update.to_dict()['message']['from']['id']
-    steem_name = update.to_dict()['message']['text'].split('/other ')[1]    
+    steem_name = update.to_dict()['message']['text'].split('/get_user ')[1]    
     json_user = steemit.get_user(steem_name).json()
 
     if not json_user:
@@ -134,14 +134,16 @@ def other_account(bot, update):
 
 def help(bot, update):
     text = '''
-Hello Dear! There are 7 commands available.. Example
 /register username
 /utopian
+/utopianqa steemitlink
 /pending
 /price
+/price bitcoin
 /price_task 4.56
 /price_destroy
 /me
+/get_user username
     '''
     update.message.reply_text(text)
 
@@ -325,7 +327,7 @@ def button(bot, update):
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater('535189587:AAEj7ebECt8MC9oVsjY1_XUz1QOWFfKqncc')
+    updater = Updater('KEY')
     approved_controll = updater.job_queue
     pending_data = updater.job_queue
     price_tast_control = updater.job_queue
@@ -358,7 +360,7 @@ def main():
     dp.add_handler(CommandHandler("price_destroy", price_destroy))
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("me", profile_me))
-    dp.add_handler(CommandHandler("other", other_account))
+    dp.add_handler(CommandHandler("get_user", get_user))
     dp.add_handler(CallbackQueryHandler(button))
 
 
